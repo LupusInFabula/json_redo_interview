@@ -23,9 +23,11 @@ refurb = "^2.0.0"
 pytest = "^8.2.1"
 ipython = "^8.24.0"
 xenon = "^0.9.1"
+faker = "^25.3.0"
+pytest-mock = "^3.14.0"
 
 [tool.poetry.scripts]
-cli = "json_redo_interview.cli:main"
+json-redo = "json_redo_interview.cli:main"
 
 [build-system]
 requires = ["poetry-core"]

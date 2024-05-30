@@ -1,4 +1,4 @@
-import urllib.request
+from urllib.request import urlopen
 
 import ijson
 import typer
@@ -10,25 +10,28 @@ from json_redo_interview.config import EVENT_SOURCE_FILE_URL
 from json_redo_interview.handlers import route_event
 from json_redo_interview.schemas import EventSchema
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 
-def main() -> None:
-    with urllib.request.urlopen(EVENT_SOURCE_FILE_URL) as f:
+@app.command(help="Process events from a remote JSON file.")
+def json_redo() -> None:
+    with urlopen(EVENT_SOURCE_FILE_URL) as f:
         events = ijson.items(f, "item")
         count = 0
+        failed = 0
         for event in events:
             try:
                 validated = EventSchema(**event)
             except ValidationError as e:
                 logger.info("Validation error: {}", e)
-            else:
-                route_event(validated)
+                failed += 1
+                continue
 
+            route_event(validated)
             count += 1
 
-        print(f"Processed {count} events.")
+        print(f"Successfully processed {count} events, {failed} failed.")
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()
