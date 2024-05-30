@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from inspect import Traceback
+from typing import TYPE_CHECKING, Self
 
 from loguru import logger
 from pydantic import ValidationError
@@ -12,37 +13,44 @@ if TYPE_CHECKING:
 
 
 class HandlerBase(ABC):
-    @abstractmethod
-    def __init__(self, data: dict[str, str | None]):
-        pass
+    def __init__(self, db_session: "FakeDB", data: dict[str, str | None]) -> None:
+        self.data = data
+        self.db_session = db_session
 
     @abstractmethod
     def send(self) -> None:
         pass
 
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, exc_type: type[Exception] | None, exc_val: Exception | None, exc_tb: Traceback | None) -> None:
+        if exc_val:
+            self.db_session.insert_failed(self.data, reason=str(exc_val))
+
 
 class SMSHandler(HandlerBase):
-    def __init__(self, data: dict[str, str | None]):
+    def __init__(self, db_session: "FakeDB", data: dict[str, str | None]) -> None:
         self.phone = data["phone"]
-        self.data = data
+        super().__init__(db_session, data)
 
     def send(self) -> None:
         logger.info("SMS sent to {}. Data: {}", self.phone, self.data)
 
 
 class EmailHandler(HandlerBase):
-    def __init__(self, data: dict[str, str | None]):
+    def __init__(self, db_session: "FakeDB", data: dict[str, str | None]) -> None:
         self.email = data["email"]
-        self.data = data
+        super().__init__(db_session, data)
 
     def send(self) -> None:
         logger.info("Email sent to {}. Data: {}", self.email, self.data)
 
 
 class PostHandler(HandlerBase):
-    def __init__(self, data: dict[str, str | None]):
+    def __init__(self, db_session: "FakeDB", data: dict[str, str | None]) -> None:
         self.url = data["url"]
-        self.data = data
+        super().__init__(db_session, data)
 
     def send(self) -> None:
         logger.info("POST sent to {}. Data: {}", self.url, self.data)
@@ -63,6 +71,7 @@ def process_event(event: dict, db: "FakeDB") -> None:
         return
 
     if handler := SENDER_MAP.get(validated.event_type):
-        handler(validated.model_dump()).send()
+        with handler(db, validated.model_dump()) as sender:
+            sender.send()
     else:
         db.insert_failed(event, reason=f"Unknown event type '{validated.event_type}'")

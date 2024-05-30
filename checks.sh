@@ -52,6 +52,6 @@ info mypy
 mypy .
 
 info pytest
-pytest tests # This would be run with --cov in a CI environment
+pytest tests --cov json_redo_interview
 
 success "all checks completed."

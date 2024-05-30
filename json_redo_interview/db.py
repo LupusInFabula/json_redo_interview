@@ -19,4 +19,4 @@ class FakeDB:
         return len(self._rows)
 
 
-db = FakeDB()
+db_session = FakeDB()
