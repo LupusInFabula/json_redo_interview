@@ -51,4 +51,7 @@ refurb .
 info mypy
 mypy .
 
+info pytest
+pytest tests
+
 success "all checks completed."

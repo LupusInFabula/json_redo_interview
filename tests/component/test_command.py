@@ -1,7 +1,7 @@
 import json
 from collections import Counter
 from collections.abc import Callable, Iterator
-from io import StringIO
+from io import BytesIO
 
 from pytest_mock import MockerFixture
 
@@ -22,7 +22,7 @@ def test_json_redo(
     for _ in range(n_failures):
         events.append(generate_event_payload({"type": "unknown"}))
 
-    stream = StringIO(json.dumps(events))
+    stream = BytesIO(json.dumps(events, indent=4).encode("utf-8"))
 
     mocker.patch("json_redo_interview.cli.urlopen", return_value=stream)
     mock_print = mocker.patch("json_redo_interview.cli.print")
