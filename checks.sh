@@ -32,7 +32,7 @@ warn() {
 
 if [ -z "${VIRTUAL_ENV-}" ]
 then
-    warn "Please run this script with poetry run ./style or from within a poetry shell"
+    warn "Please run this script with poetry run ./checks or from within a poetry shell"
     exit
 fi
 

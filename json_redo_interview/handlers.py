@@ -27,6 +27,8 @@ class HandlerBase(ABC):
     def __exit__(self, exc_type: type[Exception] | None, exc_val: Exception | None, exc_tb: Traceback | None) -> None:
         if exc_val:
             self.db_session.insert_failed(self.data, reason=str(exc_val))
+        else:
+            self.db_session.increase_processed()
 
 
 class SMSHandler(HandlerBase):
@@ -63,15 +65,15 @@ SENDER_MAP: dict[EventTypes, type[HandlerBase]] = {
 }
 
 
-def process_event(event: dict, db: "FakeDB") -> None:
+def process_event(event: dict, db_session: "FakeDB") -> None:
     try:
         validated = EventSchema(**event)
     except ValidationError as e:
-        db.insert_failed(event, reason=str(e))
+        db_session.insert_failed(event, reason=str(e))
         return
 
     if handler := SENDER_MAP.get(validated.event_type):
-        with handler(db, validated.model_dump()) as sender:
+        with handler(db_session, validated.model_dump()) as sender:
             sender.send()
     else:
-        db.insert_failed(event, reason=f"Unknown event type '{validated.event_type}'")
+        db_session.insert_failed(event, reason=f"Unknown event type '{validated.event_type}'")

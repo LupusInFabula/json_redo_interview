@@ -8,11 +8,16 @@ class FakeDB:
     """
 
     def __init__(self) -> None:
+        self.tot_processed = 0
         self._rows: list[dict] = []
 
     def insert_failed(self, data: dict, reason: str) -> int:
         self._rows.append({"status": "failed", "reason": reason, "data": data})
+        self.increase_processed()
         return len(self._rows) - 1
+
+    def increase_processed(self) -> None:
+        self.tot_processed += 1
 
     @property
     def row_count(self) -> int:
