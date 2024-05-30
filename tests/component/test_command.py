@@ -6,6 +6,7 @@ from io import BytesIO
 from pytest_mock import MockerFixture
 
 from json_redo_interview.cli import json_redo
+from json_redo_interview.handlers import EmailHandler, PostHandler, SMSHandler
 
 
 def test_json_redo(
@@ -27,12 +28,12 @@ def test_json_redo(
     mocker.patch("json_redo_interview.cli.urlopen", return_value=stream)
     mock_print = mocker.patch("json_redo_interview.cli.print")
 
-    mock_send_sms = mocker.patch("json_redo_interview.handlers.send_sms")
-    mock_send_email = mocker.patch("json_redo_interview.handlers.send_email")
-    mock_send_post = mocker.patch("json_redo_interview.handlers.send_post")
+    mock_send_sms = mocker.patch.object(SMSHandler, "send")
+    mock_send_email = mocker.patch.object(EmailHandler, "send")
+    mock_send_post = mocker.patch.object(PostHandler, "send")
     json_redo()
 
-    mock_print.assert_called_with(f"Successfully processed {n_successes} events, {n_failures} failed.")
+    mock_print.assert_called_with(f"Processed {n_successes + n_failures} events, {n_failures} failed.")
     for type_name, n_events in expected_success_counter.items():
         match type_name:
             case "sms":

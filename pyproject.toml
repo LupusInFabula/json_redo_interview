@@ -81,6 +81,9 @@ select = [
 ]
 
 [tool.mypy]
+# Allows Type[T] to refer to abstract classes, which is not otherwise supported.
+# See https://github.com/python/mypy/issues/4717
+disable_error_code = "type-abstract"
 disallow_untyped_defs = true
 show_error_codes = true
 warn_unused_ignores = true

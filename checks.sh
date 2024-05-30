@@ -37,13 +37,13 @@ then
 fi
 
 info "ruff format"
-ruff format .
+ruff format . # This would be run with --check in a CI environment
 
 info "xenon"
 xenon --no-assert -a A -m B -b B .
 
 info "ruff lint"
-ruff check . --fix
+ruff check . --fix # This would be run without --fix in a CI environment
 
 info "refurb"
 refurb .
@@ -52,6 +52,6 @@ info mypy
 mypy .
 
 info pytest
-pytest tests
+pytest tests # This would be run with --cov in a CI environment
 
 success "all checks completed."

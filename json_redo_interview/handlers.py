@@ -1,35 +1,68 @@
-from typing import TYPE_CHECKING, cast
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from loguru import logger
+from pydantic import ValidationError
 
 from json_redo_interview.enums import EventTypes
+from json_redo_interview.schemas import EventSchema
 
 if TYPE_CHECKING:
-    from json_redo_interview.schemas import EventSchema
+    from json_redo_interview.db import FakeDB
 
 
-def send_sms(phone: str, data: dict) -> None:
-    logger.info("SMS sent to {}. Data: {}", phone, data)
+class HandlerBase(ABC):
+    @abstractmethod
+    def __init__(self, data: dict[str, str | None]):
+        pass
+
+    @abstractmethod
+    def send(self) -> None:
+        pass
 
 
-def send_email(email: str, data: dict) -> None:
-    logger.info("Email sent to {}. Data: {}", email, data)
+class SMSHandler(HandlerBase):
+    def __init__(self, data: dict[str, str | None]):
+        self.phone = data["phone"]
+        self.data = data
+
+    def send(self) -> None:
+        logger.info("SMS sent to {}. Data: {}", self.phone, self.data)
 
 
-def send_post(url: str, data: dict) -> None:
-    logger.info("POST sent to {}. Data: {}", url, data)
+class EmailHandler(HandlerBase):
+    def __init__(self, data: dict[str, str | None]):
+        self.email = data["email"]
+        self.data = data
+
+    def send(self) -> None:
+        logger.info("Email sent to {}. Data: {}", self.email, self.data)
 
 
-def route_event(event_model: "EventSchema") -> None:
-    data = event_model.model_dump()
-    if event_model.event_type == EventTypes.SMS:
-        send_sms(cast(str, event_model.phone), data)
+class PostHandler(HandlerBase):
+    def __init__(self, data: dict[str, str | None]):
+        self.url = data["url"]
+        self.data = data
 
-    elif event_model.event_type == EventTypes.EMAIL:
-        send_email(cast(str, event_model.email), data)
+    def send(self) -> None:
+        logger.info("POST sent to {}. Data: {}", self.url, self.data)
 
-    elif event_model.event_type == EventTypes.POST:
-        send_post(cast(str, event_model.url), data)
 
+SENDER_MAP: dict[EventTypes, type[HandlerBase]] = {
+    EventTypes.SMS: SMSHandler,
+    EventTypes.EMAIL: EmailHandler,
+    EventTypes.POST: PostHandler,
+}
+
+
+def process_event(event: dict, db: "FakeDB") -> None:
+    try:
+        validated = EventSchema(**event)
+    except ValidationError as e:
+        db.insert_failed(event, reason=str(e))
+        return
+
+    if handler := SENDER_MAP.get(validated.event_type):
+        handler(validated.model_dump()).send()
     else:
-        raise ValueError(f"Unknown event type: {event_model.event_type}")
+        db.insert_failed(event, reason=f"Unknown event type '{validated.event_type}'")
